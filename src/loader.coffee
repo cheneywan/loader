@@ -1,54 +1,51 @@
-loader = (file, callback, isAsync = true) ->
 
-  file = if typeof file == "string" then [file] else file
-  head = document.head or document.getElementsByTagName('head')[0]
+root = this
 
-  asyncLoad = ->
-    loaded = 0
-    queue = []
-    for item, index in file
-      queue[index] = document.createElement "script"
-      queue[index].setAttribute "type", "text/javascript"
-      queue[index].setAttribute "src", item
+head = document.head or document.getElementsByTagName('head')[0]
 
-      if queue[index].addEventListener?
-        queue[index].addEventListener "load", ->
-          loaded++
-          callback?() if loaded is file.length
-        , false
-      else
-        queue[index].attachEvent "onreadystatechange", ->
-          target = window.event.srcElement
-          loaded++
-          callback?() if (loaded is file.length) and (target.readyState is 'loaded')
+clear = (node) ->
+  node.onload = node.onreadystatechange = null
+  node.parentNode?.removeChild node
 
-      head.appendChild queue[index]
-    return
+asyncLoad = (scripts, callback) ->
+  loaded = 0
+  queue = []
+  for item, index in scripts
+    queue[index] = document.createElement "script"
+    queue[index].setAttribute "type", "text/javascript"
+    queue[index].setAttribute "src", item
+    queue[index].done = false
 
-  syncLoad = ->
-    index = 0
-    queue = []
-    recursiveLoad = ->
-      queue[index] = document.createElement "script"
-      queue[index].setAttribute "type", "text/javascript"
-      queue[index].setAttribute "src", file[index]
+    queue[index].onload = queue[index].onreadystatechange = ->
+      if (!this.done) and (!this.readyState or this.readyState == 'loaded' or this.readyState == 'complete')
+        loaded++
+        clear this
+        this.done = true
+        callback?() if loaded is scripts.length
 
-      if queue[index].addEventListener?
-        queue[index].addEventListener "load", ->
-          index++
-          if index is file.length then callback?() else recursiveLoad()
-        , false
-      else
-        queue[index].attachEvent "onreadystatechange", ->
-          target = window.event.srcElement
-          index++
-          if (index is file.length) and (target.readyState is 'loaded') then callback?()  else recursiveLoad()
+    head.appendChild queue[index]
+  return
 
-      head.appendChild queue[index]
+syncLoad = (scripts, callback) ->
+  index = 0
+  queue = []
+  do recursiveLoad = ->
+    queue[index] = document.createElement "script"
+    queue[index].setAttribute "type", "text/javascript"
+    queue[index].setAttribute "src", scripts[index]
+    queue[index].done = false
 
-    recursiveLoad()
-    return
+    queue[index].onload = queue[index].onreadystatechange = ->
+      if (!this.done) and (!this.readyState or this.readyState == 'loaded' or this.readyState == 'complete')
+        index++
+        clear this
+        this.done = true
+        if index is scripts.length then callback?() else recursiveLoad()
 
-  if isAsync then asyncLoad() else syncLoad()
+    head.appendChild queue[index]
+  return
 
-@.loader = loader
+root.loadScripts = (scripts, callback, isAsync = true) ->
+  scripts = if typeof scripts == "string" then [scripts] else scripts
+
+  if isAsync then asyncLoad(scripts, callback) else syncLoad(scripts, callback)
