@@ -10,6 +10,7 @@ clear = (node) ->
 asyncLoad = (scripts, callback) ->
   loaded = 0
   queue = []
+  container = document.createDocumentFragment();
   for item, index in scripts
     queue[index] = document.createElement "script"
     queue[index].setAttribute "type", "text/javascript"
@@ -23,7 +24,9 @@ asyncLoad = (scripts, callback) ->
         this.done = true
         callback?() if loaded is scripts.length
 
-    head.appendChild queue[index]
+    container.appendChild queue[index]
+
+  head.appendChild container
   return
 
 syncLoad = (scripts, callback) ->

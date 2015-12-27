@@ -12,9 +12,10 @@
   };
 
   asyncLoad = function(scripts, callback) {
-    var i, index, item, len, loaded, queue;
+    var container, i, index, item, len, loaded, queue;
     loaded = 0;
     queue = [];
+    container = document.createDocumentFragment();
     for (index = i = 0, len = scripts.length; i < len; index = ++i) {
       item = scripts[index];
       queue[index] = document.createElement("script");
@@ -31,8 +32,9 @@
           }
         }
       };
-      head.appendChild(queue[index]);
+      container.appendChild(queue[index]);
     }
+    head.appendChild(container);
   };
 
   syncLoad = function(scripts, callback) {
